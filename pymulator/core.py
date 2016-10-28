@@ -18,6 +18,9 @@ except ImportError:
 
 
 def simulateone(f, names=None, **kwargs):
+    """
+    Simulate one replica of one point in the space of parameters
+    """
     rep = kwargs.pop('_reps', None)
     y = f(**kwargs)
     sig = inspect.signature(f)
@@ -39,6 +42,9 @@ def simulateone(f, names=None, **kwargs):
 
 
 def simulate(c):
+    """
+    Simulate from configuration object
+    """
     mname, fname = c['model'].split(':')
     mod = __import__(mname, globals(), locals(), (fname,), 0)
     f = getattr(mod, fname)
@@ -53,7 +59,6 @@ def simulate(c):
         numpy.random.set_state(c['state'])
     else:
         c['state'] = numpy.random.get_state()
-    reps = c.pop('reps', 1)
     if with_progress:
         n = functools.reduce(int.__mul__,
                              map(len, c['spans'].values()))
@@ -92,7 +97,7 @@ if __name__ == '__main__':
     df = simulate(c)
     c['records'] = df
     with open(path, 'w') as f:
-        json.dump(c, f, default=_default)
+        json.dump(c, f, default=_default, indent=4)
 
     print('Results written to {}'.format(path))
 

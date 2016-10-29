@@ -3,7 +3,33 @@
 import json
 import datetime
 
-from utils import importmodel, PandasNumpyEncoderMixIn, hook
+from utils import PandasNumpyEncoderMixIn, hook
+
+
+def importmodel(s):
+    """
+    Import model from string s specifying a callable. The string has the
+    following structure:
+
+        package[.package]*.model[:function]
+
+    For example:
+
+        foo.bar.mod:func
+
+    Will be imported as
+
+        from foo.bar.mod import func
+
+    TODO: unbound class method
+    """
+    mname, fname = s.split(':')
+    mod = __import__(mname, globals(), locals(), (fname,), 0)
+    f = getattr(mod, fname)
+    if not callable(f):
+        raise ValueError("Model is not callable")
+    return f
+
 
 def funstr(fun):
     if not callable(fun):

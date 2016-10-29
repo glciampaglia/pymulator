@@ -66,38 +66,3 @@ def hook(d):
     return d
 
 
-def importmodel(s):
-    """
-    Import model from string s specifying a callable. The string has the
-    following structure:
-
-        package[.package]*.model[:function]
-
-    For example:
-
-        foo.bar.mod:func
-
-    Will be imported as
-
-        from foo.bar.mod import func
-
-    TODO: unbound class method
-    """
-    mname, fname = s.split(':')
-    mod = __import__(mname, globals(), locals(), (fname,), 0)
-    f = getattr(mod, fname)
-    if not callable(f):
-        raise ValueError("Model is not callable")
-    return f
-
-
-# if __name__ == '__main__':
-    # expected = numpy.arange(100, dtype=numpy.float)
-    # dumped = json.dumps(expected, cls=NumpyArrayEncoder)
-    # result = json.loads(dumped, object_hook=json_numpy_obj_hook)
-
-
-    # # None of the following assertions will be broken.
-    # assert result.dtype == expected.dtype, "Wrong Type"
-    # assert result.shape == expected.shape, "Wrong Shape"
-    # assert np.allclose(expected, result), "Wrong Values"

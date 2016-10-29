@@ -2,10 +2,11 @@ import numpy
 import pandas
 import itertools
 import functools
-import json
-import datetime
 import inspect
 
+import sim
+
+# Progress bar
 try:
     import progress.bar
     with_progress = True
@@ -20,63 +21,80 @@ except ImportError:
 def simulateone(f, names=None, **kwargs):
     """
     Simulate one replica of one point in the space of parameters
+
+    Parameters
+    ==========
+    f : callable
+        The model
+
+    names : sequence
+        Optional; list of output variable names. If not specified: out1, out2, ...
+
+    kwargs : dict
+        Dictionary of model parameters
+
+    Returns
+    =======
+    r : dict
+        A dictionary with all bound arguments of f and, for each
     """
-    rep = kwargs.pop('_reps', None)
+    try:
+        del kwargs['_reps']
+    except KeyError:
+        pass
     y = f(**kwargs)
     sig = inspect.signature(f)
     a = sig.bind(**kwargs)
     a.apply_defaults()
     try:
+        # remove stuff we don't need to return
         del a.arguments['prng']
     except KeyError:
         pass
     ytup = tuple(y)
     ny = len(ytup)
     if names is None:
-        names = ['Var{}'.format(i) for i in range(ny)]
+        names = ['out{:d}'.format(i) for i in range(ny)]
     r = dict(zip(names, ytup))
     r.update(dict(a.arguments))
-    if rep is not None:
-        r['_reps'] = rep
     return r
 
 
-def simulate(c):
+def simulate(s):
     """
     Simulate from configuration object
+
+    Parameters
+    ==========
+    c : dict
+        A configuration dictionary
     """
-    mname, fname = c['model'].split(':')
-    mod = __import__(mname, globals(), locals(), (fname,), 0)
-    f = getattr(mod, fname)
-    assert callable(f), "Model is not callable"
-    namedvalues = (itertools.product((k,), v)
-                   for k, v in c['spans'].items())
+    namedvalues = (itertools.product((k,), v) for k, v in s.spans.items())
     x = itertools.product(*namedvalues)
     tmp = []
-    if 'seed' in c:
-        numpy.random.seed(c['seed'])
-    elif 'state' in c:
-        numpy.random.set_state(c['state'])
+    # Set the pseudo-random number generator
+    if s.seed is not None:
+        numpy.random.seed(s.seed)
+    elif hasattr(s, 'state'):
+        numpy.random.set_state(s.state)
     else:
-        c['state'] = numpy.random.get_state()
+        s.state = numpy.random.get_state()
+    # Progress bar
     if with_progress:
         n = functools.reduce(int.__mul__,
-                             map(len, c['spans'].values()))
-        x = ETABar(c['model'], max=n).iter(x)
+                             map(len, s.spans.values()))
+        x = ETABar(sim.funstr(s.model), max=n).iter(x)
+    # Sequential sulation loop
     for tups in x:
         kw = dict(tups)
-        d = simulateone(f, names=c['outputs'], **kw)
+        d = simulateone(s.model, names=s.outputs, **kw)
         tmp.append(d)
+    # Average results
     df = pandas.DataFrame(tmp)
     cols = list(df.columns)
-    for n in c['outputs']:
+    for n in s.outputs:
         cols.remove(n)
-    cols.remove('_reps')
     return df.groupby(cols, as_index=False).mean()
-
-
-def _default(df):
-    return json.loads(df.to_json(orient='records'))
 
 
 if __name__ == '__main__':
@@ -87,17 +105,9 @@ if __name__ == '__main__':
         'steps': [100],
         '_reps': list(range(10))
     }
-    c = {
-        'spans': spans,
-        'model': 'urn:draw',
-        'seed': 1,
-        'timestamp': str(datetime.datetime.now()),
-        'outputs': ['quality', 'efficiency']
-    }
-    df = simulate(c)
-    c['records'] = df
-    with open(path, 'w') as f:
-        json.dump(c, f, default=_default, indent=4)
-
+    s = sim.Sim('urn:draw', spans, ['quality', 'efficiency'], seed=1)
+    df = simulate(s)
+    s.results = df
+    s.dump(path)
     print('Results written to {}'.format(path))
 

@@ -22,13 +22,18 @@ class Sim(object):
 
     This class mainly for correct JSON serialization/deserialization of the above information.
     """
-
     def __init__(self, modelstr, spans, outputs, seed=None):
         self.spans = spans
         self.model = modelstr
         self.outputs = outputs
         self.timestamp = datetime.datetime.now()
         self.seed = seed
+
+    def __eq__(self, other):
+        def _(obj):
+            d = dict(obj.__dict__)
+            return (d, d.pop('results', None), d.pop('state', None))
+        return all(map(all, _(self), _(other)))
 
     def _getspans(self):
         return dict(self._spans)

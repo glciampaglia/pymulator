@@ -3,7 +3,7 @@
 import json
 import datetime
 
-from serialize import PandasNumpyEncoderMixIn, hook
+from .serialize import PandasNumpyEncoderMixIn, hook
 
 
 def importmodel(s):

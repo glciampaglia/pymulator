@@ -4,7 +4,7 @@ import itertools
 import functools
 import inspect
 
-import sim
+from . import sim
 
 # Progress bar
 try:

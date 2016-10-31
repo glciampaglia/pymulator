@@ -10,6 +10,11 @@ setup(
         'scipy',
         'progress',
     ],
+    entry_points={
+        'console_scripts': [
+            'pymulator = pymulator.cmdline:main'
+        ]
+    },
     author="Giovanni Luca Ciampaglia",
     author_email="glciampagl@gmail.com",
     description="Reproducible simulation for lazy Python programmers",
